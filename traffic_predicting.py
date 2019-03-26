@@ -125,8 +125,11 @@ def train_network():
 
 	print('Creating image generators')
 	train_generator = train_datagen.flow_from_directory(train_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
+	print(train_generator.class_indices)
 	val_generator = val_datagen.flow_from_directory(val_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
 	test_generator = test_datagen.flow_from_directory(test_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
+	print(test_generator.class_indices)
+	sys.exit()
 	#train_generator = train_datagen.flow_from_directory(train_dir, target_size=(150, 150), batch_size=batch_no, class_mode='categorical', shuffle=True)
 	#val_generator = val_datagen.flow_from_directory(val_dir, target_size=(150, 150), batch_size=batch_no, class_mode='categorical', shuffle=True)
 	#for image_batch, label_batch in train_generator:
@@ -191,7 +194,7 @@ def train_network():
 	train_epoch_steps = train_size / batch_no
 	val_epoch_steps = val_size / batch_no
 	print("Training network")
-	history = model.fit_generator(train_generator, steps_per_epoch=train_epoch_steps, epochs=6, validation_data=val_generator, validation_steps=val_epoch_steps)
+	history = model.fit_generator(train_generator, steps_per_epoch=train_epoch_steps, epochs=15, validation_data=val_generator, validation_steps=val_epoch_steps)
 
 	test_epoch_steps = test_size / batch_no
 	results = model.evaluate_generator(generator=test_generator, steps=test_epoch_steps)
@@ -220,6 +223,6 @@ def train_network():
 
 	plt.show()
 
-preprocess()
-#train_network()
+#preprocess()
+train_network()
 
