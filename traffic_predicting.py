@@ -35,7 +35,7 @@ val_dir = os.path.join(current_dir, 'val')
 train_dir_size = 50000
 val_dir_size = 5000
 test_dir_size = 5000
-train_size = 10000
+train_size = 1000
 val_size = 500
 test_size = 1000
 
@@ -84,7 +84,7 @@ def make_category_dirs(dir):
 def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_size):
     low_dir = os.path.join(save_dir, 'low')
     medium_dir = os.path.join(save_dir, 'medium')
-    low_traffic_max_thresh = 5  
+    low_traffic_max_thresh = 4 
     low_traffic_num = 0
     medium_traffic_num = 0
     print('Randomizing labels')
@@ -95,21 +95,40 @@ def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_siz
         image_labels = image_value['labels']
         car_count = 0;
         for label in image_labels:
-            category = label['category']
-            if category == 'car':
-                car_count = car_count + 1
+            if isVehicle(label):
+            	car_count = car_count + 1
         src = os.path.join(images_dir, image_name)
         if low_traffic_num > save_dir_size or medium_traffic_num > save_dir_size:
         	break
         if car_count < low_traffic_max_thresh and low_traffic_num < save_dir_size:
             shutil.copy(src, low_dir)
             low_traffic_num = low_traffic_num + 1
-        else:
+        elif car_count > low_traffic_max_thresh and medium_traffic_num < save_dir_size:
         	shutil.copy(src, medium_dir)
         	medium_traffic_num = medium_traffic_num + 1
+        #print("image: {} has car count {}", image_name, car_count)
+        #sys.exit()
     print('Categorized ', save_dir)
     print('low traffic no: ', low_traffic_num)
     print('medium traffic no: ', medium_traffic_num)
+
+def isClose(box2d):
+	y_thresh = 40
+	y1 = box2d['y1']
+	y2 = box2d['y2']
+	#print("y1 is {}", y1)
+	#print("y2 is {}", y2)
+	y_size = y2 - y1
+	if(y_size <= y_thresh):
+		return False
+	return True
+
+def isVehicle(label):
+	category = label['category']
+	if category == 'car' or category == 'truck' or category == 'bus':
+		box = label['box2d']
+		return isClose(box)
+	return False
 
 def copy_images(save_dir, images_dir):
     filenames = os.listdir(images_dir)[0:500]
@@ -125,13 +144,11 @@ def train_network():
 
 	print('Creating image generators')
 	train_generator = train_datagen.flow_from_directory(train_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
-	print(train_generator.class_indices)
 	val_generator = val_datagen.flow_from_directory(val_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
 	test_generator = test_datagen.flow_from_directory(test_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
-	print(test_generator.class_indices)
-	sys.exit()
 	#train_generator = train_datagen.flow_from_directory(train_dir, target_size=(150, 150), batch_size=batch_no, class_mode='categorical', shuffle=True)
 	#val_generator = val_datagen.flow_from_directory(val_dir, target_size=(150, 150), batch_size=batch_no, class_mode='categorical', shuffle=True)
+	test_generator = test_datagen.flow_from_directory(test_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
 	#for image_batch, label_batch in train_generator:
 	 #   print('data batch shape:', image_batch.shape)
 	  #  print('labels batch shape:', label_batch.shape)
@@ -165,11 +182,10 @@ def train_network():
 	model.add(layers.Conv2D(256, (3, 3), activation='relu'))
 	model.add(layers.MaxPooling2D((2, 2)))
 	model.add(layers.Flatten())
-	model.add(layers.Dropout(0.5))
+	model.add(layers.Dropout(0.2))
 	model.add(layers.Dense(512, activation='relu'))
 	model.add(layers.Dense(1, activation='sigmoid'))
 	model.summary()
-	
 	
 
 	'''
@@ -194,7 +210,7 @@ def train_network():
 	train_epoch_steps = train_size / batch_no
 	val_epoch_steps = val_size / batch_no
 	print("Training network")
-	history = model.fit_generator(train_generator, steps_per_epoch=train_epoch_steps, epochs=15, validation_data=val_generator, validation_steps=val_epoch_steps)
+	history = model.fit_generator(train_generator, steps_per_epoch=train_epoch_steps, epochs=24, validation_data=val_generator, validation_steps=val_epoch_steps)
 
 	test_epoch_steps = test_size / batch_no
 	results = model.evaluate_generator(generator=test_generator, steps=test_epoch_steps)
