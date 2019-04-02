@@ -35,23 +35,24 @@ val_dir = os.path.join(current_dir, 'val')
 train_dir_size = 50000
 val_dir_size = 5000
 test_dir_size = 5000
-train_size = 1000
-val_size = 500
+train_size = 2000
+val_size = 1000
 test_size = 1000
+
 
 def preprocess():
 	K.tensorflow_backend._get_available_gpus()
 	#print(device_lib.list_local_devices())
 
-	train_labels = get_labels_file(train_labels_path)
-	temp_val_labels = get_labels_file(val_labels_path)
-	val_labels = temp_val_labels[0:val_dir_size]
-	test_labels = temp_val_labels[val_dir_size:val_dir_size + test_dir_size]
-
 	print("Making train, test, and val directories")
 	make_category_dirs(train_dir)
 	make_category_dirs(test_dir)
 	make_category_dirs(val_dir)
+
+	train_labels = get_labels_file(train_labels_path)
+	temp_val_labels = get_labels_file(val_labels_path)
+	val_labels = temp_val_labels[0:val_dir_size]
+	test_labels = temp_val_labels[val_dir_size:val_dir_size + test_dir_size]
 
 	print("Categorizing train, test and val directories");
 	categorize_images(train_labels, train_dir, train_size, train_images_path, train_dir_size)
@@ -93,9 +94,11 @@ def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_siz
     for image_value in randomozed_labels:
         image_name = image_value['name']
         image_labels = image_value['labels']
+        #print("image is ", image_name)
+        drivable_areas = getDrivableArea(image_labels)
         car_count = 0;
         for label in image_labels:
-            if isVehicle(label):
+            if isVehicle(label, drivable_areas):
             	car_count = car_count + 1
         src = os.path.join(images_dir, image_name)
         if low_traffic_num > save_dir_size or medium_traffic_num > save_dir_size:
@@ -106,11 +109,45 @@ def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_siz
         elif car_count > low_traffic_max_thresh and medium_traffic_num < save_dir_size:
         	shutil.copy(src, medium_dir)
         	medium_traffic_num = medium_traffic_num + 1
-        #print("image: {} has car count {}", image_name, car_count)
+        #print("image: ", image_name, ' has car count ', car_count)
         #sys.exit()
     print('Categorized ', save_dir)
     print('low traffic no: ', low_traffic_num)
     print('medium traffic no: ', medium_traffic_num)
+
+def getDrivableArea(image_labels):
+	drivable_areas = []
+	for label in image_labels:
+		category = label['category']
+		if category == 'drivable area':
+			attr = label['attributes']
+			area_type = attr['areaType']
+			poly2d = label['poly2d']
+			vertices = poly2d[0]
+			vertices = vertices['vertices']
+			drivable_areas.append(vertices)
+
+	return drivable_areas
+
+def inDrivableArea(drivable_areas, box2d):
+	x1_car = box2d['x1']
+	x2_car = box2d['x2']
+	in_left_bounds = False
+	in_right_bounds = False
+	# Determines if car is in left hand lane
+	for area in drivable_areas:
+		for vertex in area:
+			x_vertex = vertex[0]
+			if x1_car > x_vertex and x2_car > x_vertex:
+				in_left_bounds = True
+				break
+	for area in drivable_areas:
+		for vertex in area:
+			x_vertex = vertex[0]
+			if x2_car < x_vertex and x2_car < x_vertex:
+				in_right_bounds = True
+				break
+	return in_left_bounds and in_right_bounds			
 
 def isClose(box2d):
 	y_thresh = 40
@@ -123,11 +160,19 @@ def isClose(box2d):
 		return False
 	return True
 
-def isVehicle(label):
+def isVehicle(label, drivable_areas):
 	category = label['category']
+	close = False
+	drivable = False
 	if category == 'car' or category == 'truck' or category == 'bus':
 		box = label['box2d']
-		return isClose(box)
+		close = isClose(box)
+		#drivable = inDrivableArea(drivable_areas, box)
+		#if close == False:
+		#	print(category, ' is to far away')
+		#if drivable == False:
+		#	print(category, ' is not in a drivable area')
+		return close
 	return False
 
 def copy_images(save_dir, images_dir):
@@ -182,7 +227,7 @@ def train_network():
 	model.add(layers.Conv2D(256, (3, 3), activation='relu'))
 	model.add(layers.MaxPooling2D((2, 2)))
 	model.add(layers.Flatten())
-	model.add(layers.Dropout(0.2))
+	model.add(layers.Dropout(0.5))
 	model.add(layers.Dense(512, activation='relu'))
 	model.add(layers.Dense(1, activation='sigmoid'))
 	model.summary()
@@ -210,7 +255,7 @@ def train_network():
 	train_epoch_steps = train_size / batch_no
 	val_epoch_steps = val_size / batch_no
 	print("Training network")
-	history = model.fit_generator(train_generator, steps_per_epoch=train_epoch_steps, epochs=24, validation_data=val_generator, validation_steps=val_epoch_steps)
+	history = model.fit_generator(train_generator, steps_per_epoch=train_epoch_steps, epochs=16, validation_data=val_generator, validation_steps=val_epoch_steps)
 
 	test_epoch_steps = test_size / batch_no
 	results = model.evaluate_generator(generator=test_generator, steps=test_epoch_steps)
