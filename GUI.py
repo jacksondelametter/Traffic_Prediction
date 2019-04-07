@@ -35,20 +35,26 @@ class main:
         Label(info_frame,text="Traffic Predicting",fg="black",font=("",20,"bold")).pack(pady=10)
         self.prediction_label = Label(info_frame,text="Traffic Prediction: None",fg="blue",font=("",20,"bold"))
         self.answer_label = Label(info_frame,text="Traffic Answer: None",fg="blue",font=("",20,"bold"))
+        self.acc_label = Label(info_frame,text="Acc: None",fg="blue",font=("",20,"bold"))
+        self.setup_acc()
         self.prediction_label.pack(pady=20)
         self.answer_label.pack(pady=20)
+        self.acc_label.pack(pady=20)
         self.next_picture()
         
         arrow_frame = Frame(info_frame, pady=20)
         self.next_button = Button(arrow_frame,font=("",10),fg="white",bg="red", text="Next", command=self.next_picture)
-        self.prev_button = Button(arrow_frame,font=("",10),fg="white",bg="red", text="Prev", command=self.prev_picture)
+        #self.prev_button = Button(arrow_frame,font=("",10),fg="white",bg="red", text="Prev", command=self.prev_picture)
         self.next_button.pack(side=RIGHT)
-        self.prev_button.pack(side=LEFT)
+        #self.prev_button.pack(side=LEFT)
         arrow_frame.pack(side=BOTTOM)
 
         Button(info_frame,font=("",15),fg="white",bg="red", text="Predict", command=self.predict_traffic).pack(side=BOTTOM)
         info_frame.pack(side=RIGHT,fill=Y)
 
+    def setup_acc(self):
+        self.correct_preds = 0;
+        self.total_preds = 0;
 
     def predict_traffic(self):
         print('Predict traffic')
@@ -65,10 +71,14 @@ class main:
         if prediction == 0:
             prediction = 'low'
         else:
-            prediction = 'medium'
+            prediction = 'high'
         print(prediction)
+        if prediction == label:
+            self.correct_preds = self.correct_preds + 1
+        self.total_preds = self.total_preds + 1
         self.prediction_label['text'] = 'Traffic Prediction: {}'.format(prediction)
         self.answer_label['text'] = 'Traffic Answer: ' + label
+        self.acc_label['text'] = 'Acc: ' + str((self.correct_preds / self.total_preds * 100)) + '%'
 
     def next_picture(self):
         print('Next picture')
@@ -115,6 +125,7 @@ class main:
         for pic_name in os.listdir(dir):
             if count != 100:
                 pics[pic_name] = label
+
 
 root = Tk()
 main(root)

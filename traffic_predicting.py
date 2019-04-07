@@ -35,7 +35,7 @@ val_dir = os.path.join(current_dir, 'val')
 train_dir_size = 50000
 val_dir_size = 5000
 test_dir_size = 5000
-train_size = 2000
+train_size = 5000
 val_size = 1000
 test_size = 1000
 
@@ -167,12 +167,12 @@ def isVehicle(label, drivable_areas):
 	if category == 'car' or category == 'truck' or category == 'bus':
 		box = label['box2d']
 		close = isClose(box)
-		#drivable = inDrivableArea(drivable_areas, box)
+		drivable = inDrivableArea(drivable_areas, box)
 		#if close == False:
 		#	print(category, ' is to far away')
 		#if drivable == False:
 		#	print(category, ' is not in a drivable area')
-		return close
+		return close and drivable
 	return False
 
 def copy_images(save_dir, images_dir):
@@ -182,7 +182,7 @@ def copy_images(save_dir, images_dir):
         shutil.copy(src, save_dir)
 
 def train_network():
-	batch_no = 20;
+	batch_no = 30;
 	train_datagen = ImageDataGenerator(rescale=1./255)
 	test_datagen = ImageDataGenerator(rescale=1./255)
 	val_datagen = ImageDataGenerator(rescale=1./255)
@@ -284,6 +284,14 @@ def train_network():
 
 	plt.show()
 
-#preprocess()
-train_network()
+# Program starts here
+if len(sys.argv) == 0:
+	print('Must have mode argument: preprocess or train')
+command = sys.argv[1]
+if command == 'process':
+	preprocess()
+elif command == 'train':
+	train_network()
+else:
+	print('Invalid argument')
 
