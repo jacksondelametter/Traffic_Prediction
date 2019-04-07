@@ -71,7 +71,7 @@ class main:
         if prediction == 0:
             prediction = 'low'
         else:
-            prediction = 'high'
+            prediction = 'medium'
         print(prediction)
         if prediction == label:
             self.correct_preds = self.correct_preds + 1

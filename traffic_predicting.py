@@ -182,7 +182,7 @@ def copy_images(save_dir, images_dir):
         shutil.copy(src, save_dir)
 
 def train_network():
-	batch_no = 30;
+	batch_no = 15;
 	train_datagen = ImageDataGenerator(rescale=1./255)
 	test_datagen = ImageDataGenerator(rescale=1./255)
 	val_datagen = ImageDataGenerator(rescale=1./255)
