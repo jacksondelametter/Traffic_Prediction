@@ -12,7 +12,7 @@ from keras.preprocessing import image
 
 os.chdir('..')
 current_dir = os.getcwd()
-pic_dir = os.path.join(current_dir, 'test')
+pic_dir = os.path.join(current_dir, 'gui')
 json_path = os.path.join(current_dir, 'model')
 json_file = open('model.json')
 loaded_model_json = json_file.read()

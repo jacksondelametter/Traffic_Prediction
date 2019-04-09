@@ -31,13 +31,16 @@ val_labels_path = os.path.join(labels_path, 'bdd100k_labels_images_val.json')
 train_dir = os.path.join(current_dir, 'train')
 test_dir = os.path.join(current_dir, 'test')
 val_dir = os.path.join(current_dir, 'val')
+gui_dir = os.path.join(current_dir, 'gui')
 
 train_dir_size = 50000
-val_dir_size = 5000
-test_dir_size = 5000
+val_dir_size = 2000
+test_dir_size = 2000
+gui_dir_size = 2000
 train_size = 5000
 val_size = 1000
 test_size = 1000
+gui_size = 1000
 
 
 def preprocess():
@@ -48,16 +51,21 @@ def preprocess():
 	make_category_dirs(train_dir)
 	make_category_dirs(test_dir)
 	make_category_dirs(val_dir)
+	make_category_dirs(gui_dir)
 
 	train_labels = get_labels_file(train_labels_path)
 	temp_val_labels = get_labels_file(val_labels_path)
 	val_labels = temp_val_labels[0:val_dir_size]
-	test_labels = temp_val_labels[val_dir_size:val_dir_size + test_dir_size]
+	test_labels_limit = val_dir_size + test_dir_size
+	test_labels = temp_val_labels[val_dir_size:test_labels_limit]
+	gui_labels_limit = test_labels_limit + gui_dir_size
+	gui_labels = temp_val_labels[test_labels_limit:gui_labels_limit]
 
-	print("Categorizing train, test and val directories");
+	print("Categorizing train, test, val, and gui directories");
 	categorize_images(train_labels, train_dir, train_size, train_images_path, train_dir_size)
 	categorize_images(test_labels, test_dir, test_size, val_images_path, test_dir_size)
 	categorize_images(val_labels, val_dir, val_size, val_images_path, val_dir_size)
+	categorize_images(gui_labels, gui_dir, gui_size, val_images_path, gui_dir_size)
 
 def get_labels_file(labels_path):
 	file_object = open(labels_path)
