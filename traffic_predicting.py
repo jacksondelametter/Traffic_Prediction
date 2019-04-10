@@ -34,13 +34,13 @@ val_dir = os.path.join(current_dir, 'val')
 gui_dir = os.path.join(current_dir, 'gui')
 
 train_dir_size = 50000
-val_dir_size = 2000
-test_dir_size = 2000
-gui_dir_size = 2000
+val_dir_size = 4500
+test_dir_size = 4500
+gui_dir_size = 1000
 train_size = 5000
-val_size = 1000
-test_size = 1000
-gui_size = 1000
+val_size = 1500
+test_size = 1500
+gui_size = 500
 
 
 def preprocess():
@@ -111,7 +111,7 @@ def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_siz
         src = os.path.join(images_dir, image_name)
         if low_traffic_num > save_dir_size or medium_traffic_num > save_dir_size:
         	break
-        if car_count < low_traffic_max_thresh and low_traffic_num < save_dir_size:
+        if car_count <= low_traffic_max_thresh and low_traffic_num < save_dir_size:
             shutil.copy(src, low_dir)
             low_traffic_num = low_traffic_num + 1
         elif car_count > low_traffic_max_thresh and medium_traffic_num < save_dir_size:
@@ -152,7 +152,7 @@ def inDrivableArea(drivable_areas, box2d):
 	for area in drivable_areas:
 		for vertex in area:
 			x_vertex = vertex[0]
-			if x2_car < x_vertex and x2_car < x_vertex:
+			if x1_car < x_vertex and x2_car < x_vertex:
 				in_right_bounds = True
 				break
 	return in_left_bounds and in_right_bounds			
@@ -190,7 +190,7 @@ def copy_images(save_dir, images_dir):
         shutil.copy(src, save_dir)
 
 def train_network():
-	batch_no = 15;
+	batch_no = 20;
 	train_datagen = ImageDataGenerator(rescale=1./255)
 	test_datagen = ImageDataGenerator(rescale=1./255)
 	val_datagen = ImageDataGenerator(rescale=1./255)
