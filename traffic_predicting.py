@@ -117,13 +117,14 @@ def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_siz
         elif car_count > low_traffic_max_thresh and medium_traffic_num < save_dir_size:
         	shutil.copy(src, medium_dir)
         	medium_traffic_num = medium_traffic_num + 1
-        #print("image: ", image_name, ' has car count ', car_count)
-        #sys.exit()
+        print("image: ", image_name, ' has car count ', car_count)
+        sys.exit()
     print('Categorized ', save_dir)
     print('low traffic no: ', low_traffic_num)
     print('medium traffic no: ', medium_traffic_num)
 
 def getDrivableArea(image_labels):
+	#curb_areas = getCurbAreas(image_labels)
 	drivable_areas = []
 	for label in image_labels:
 		category = label['category']
@@ -133,10 +134,60 @@ def getDrivableArea(image_labels):
 			poly2d = label['poly2d']
 			vertices = poly2d[0]
 			vertices = vertices['vertices']
-			drivable_areas.append(vertices)
+			#filtered_vertices = removeParkingLanes(vertices, curb_areas)
+			x_values = []
+			for vertex in vertices:
+				x_values.append(vertex[0])
+			x_values.sort()
+			x_smallest = x_values[0]
+			x_largest = x_values[len(vertices)-1]
+			vertex = [x_smallest, x_largest]
+			print('x_smallest: ', x_smallest, ' x_largest: ', x_largest)
+			drivable_areas.append(vertex)
+			#drivable_areas.append(vertices)
 
 	return drivable_areas
 
+def removeParkingLanes(vertices, curb_areas):
+	new_vertices = []
+	for vertex in vertices:
+		x = vertex[0]
+		for curb_area in curb_areas:
+			for curb_vertex in curb_area:
+				x_curb = curb_vertex[0]
+				if abs(x_curb - x) >= 20:
+					# If the vertex is right next to a curb, assume its for parking
+					new_vertices.append(vertex)
+	return new_vertices
+	
+def getCurbAreas(image_labels):
+	curb_areas = []
+	for label in image_labels:
+		category = label['category']
+		if category == 'lane':
+			attr = label['attributes']
+			lane_type = attr['laneType']
+			if lane_type == 'road curb':
+				poly2d = label['poly2d']
+				vertices = poly2d[0]
+				vertices = vertices['vertices']
+				curb_areas.append(vertices)
+	return curb_areas
+
+def inDrivableArea(drivable_areas, box2d):
+	x1_car = box2d['x1']
+	x2_car = box2d['x2']
+	print('vehicle coordinates are: x1 ', x1_car, ' x2: ', x2_car)
+
+	for area_vertex in drivable_areas:
+		x_smallest = area_vertex[0] - 100
+		x_largest = area_vertex[1] + 100
+		print("area coordinates x_smallest: ", x_smallest, " x_largest: ", x_largest)
+		if x1_car >= x_smallest and x2_car <= x_largest:
+			return True
+	return False
+
+'''
 def inDrivableArea(drivable_areas, box2d):
 	x1_car = box2d['x1']
 	x2_car = box2d['x2']
@@ -155,7 +206,8 @@ def inDrivableArea(drivable_areas, box2d):
 			if x1_car < x_vertex and x2_car < x_vertex:
 				in_right_bounds = True
 				break
-	return in_left_bounds and in_right_bounds			
+	return in_left_bounds and in_right_bounds	
+	'''		
 
 def isClose(box2d):
 	y_thresh = 40
@@ -176,10 +228,10 @@ def isVehicle(label, drivable_areas):
 		box = label['box2d']
 		close = isClose(box)
 		drivable = inDrivableArea(drivable_areas, box)
-		#if close == False:
-		#	print(category, ' is to far away')
-		#if drivable == False:
-		#	print(category, ' is not in a drivable area')
+		if close == False:
+			print(category, ' is to far away')
+		if drivable == False:
+			print(category, ' is not in a drivable area')
 		return close and drivable
 	return False
 
