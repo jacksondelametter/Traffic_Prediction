@@ -38,9 +38,9 @@ val_dir_size = 4500
 test_dir_size = 4500
 gui_dir_size = 1000
 train_size = 5000
-val_size = 1500
-test_size = 1500
-gui_size = 500
+val_size = 500
+test_size = 500
+gui_size = 200
 
 
 def preprocess():
@@ -117,8 +117,8 @@ def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_siz
         elif car_count > low_traffic_max_thresh and medium_traffic_num < save_dir_size:
         	shutil.copy(src, medium_dir)
         	medium_traffic_num = medium_traffic_num + 1
-        print("image: ", image_name, ' has car count ', car_count)
-        sys.exit()
+        #print("image: ", image_name, ' has car count ', car_count)
+        #sys.exit()
     print('Categorized ', save_dir)
     print('low traffic no: ', low_traffic_num)
     print('medium traffic no: ', medium_traffic_num)
@@ -141,8 +141,12 @@ def getDrivableArea(image_labels):
 			x_values.sort()
 			x_smallest = x_values[0]
 			x_largest = x_values[len(vertices)-1]
+			if x_smallest < 100:
+				x_smallest = x_smallest + 300
+			if x_largest > 1080:
+				x_largest = x_largest - 300
 			vertex = [x_smallest, x_largest]
-			print('x_smallest: ', x_smallest, ' x_largest: ', x_largest)
+			#print('x_smallest: ', x_smallest, ' x_largest: ', x_largest)
 			drivable_areas.append(vertex)
 			#drivable_areas.append(vertices)
 
@@ -177,14 +181,16 @@ def getCurbAreas(image_labels):
 def inDrivableArea(drivable_areas, box2d):
 	x1_car = box2d['x1']
 	x2_car = box2d['x2']
-	print('vehicle coordinates are: x1 ', x1_car, ' x2: ', x2_car)
+	#print('vehicle coordinates are: x1 ', x1_car, ' x2: ', x2_car)
 
 	for area_vertex in drivable_areas:
-		x_smallest = area_vertex[0] - 100
-		x_largest = area_vertex[1] + 100
-		print("area coordinates x_smallest: ", x_smallest, " x_largest: ", x_largest)
+		x_smallest = area_vertex[0]
+		x_largest = area_vertex[1] 
+		#print("area coordinates x_smallest: ", x_smallest, " x_largest: ", x_largest)
 		if x1_car >= x_smallest and x2_car <= x_largest:
+			#print('car is drivable, x1: ', x1_car, 'x2: ', x2_car)
 			return True
+	#print('car is not drivable, x1: ', x1_car, 'x2: ', x2_car)
 	return False
 
 '''
@@ -213,11 +219,15 @@ def isClose(box2d):
 	y_thresh = 40
 	y1 = box2d['y1']
 	y2 = box2d['y2']
+	x1_car = box2d['x1']
+	x2_car = box2d['x2']
 	#print("y1 is {}", y1)
 	#print("y2 is {}", y2)
 	y_size = y2 - y1
 	if(y_size <= y_thresh):
+		#print('car is to far away, x1: ', x1_car, 'x2: ', x2_car)
 		return False
+	#print('car is close, x1: ', x1_car, 'x2: ', x2_car)
 	return True
 
 def isVehicle(label, drivable_areas):
@@ -228,10 +238,6 @@ def isVehicle(label, drivable_areas):
 		box = label['box2d']
 		close = isClose(box)
 		drivable = inDrivableArea(drivable_areas, box)
-		if close == False:
-			print(category, ' is to far away')
-		if drivable == False:
-			print(category, ' is not in a drivable area')
 		return close and drivable
 	return False
 
