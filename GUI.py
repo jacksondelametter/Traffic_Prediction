@@ -22,10 +22,14 @@ model.load_weights('model.h5')
 print('Loaded model with weights')
 
 class main:
-    def __init__(self, master):
+    def __init__(self, master, mode):
         
         self.master = master
-        self.get_pictures()
+        self.mode = mode
+        if mode == 'labeled_images':
+            self.get_pictures()
+        else:
+            self.get_non_labeled_pics()
         self.picture_frame = Frame(self.master, padx=5, pady=5)
         self.picture_label = Label(self.picture_frame)
         
@@ -38,8 +42,9 @@ class main:
         self.acc_label = Label(info_frame,text="Acc: None",fg="blue",font=("",20,"bold"))
         self.setup_acc()
         self.prediction_label.pack(pady=20)
-        self.answer_label.pack(pady=20)
-        self.acc_label.pack(pady=20)
+        if mode == 'labeled_images':
+            self.answer_label.pack(pady=20)
+            self.acc_label.pack(pady=20)
         self.next_picture()
         
         arrow_frame = Frame(info_frame, pady=20)
@@ -59,8 +64,11 @@ class main:
     def predict_traffic(self):
         print('Predict traffic')
         label = self.picture_dic[self.current_pic]
-        pic_path = os.path.join(pic_dir, label)
-        pic_path = os.path.join(pic_path, self.current_pic)
+        if self.mode == 'labeled_images':
+            pic_path = os.path.join(pic_dir, label)
+            pic_path = os.path.join(pic_path, self.current_pic)
+        else:
+            pic_path = os.path.join(pic_dir, self.current_pic)
         pic = image.load_img(pic_path, target_size=(150, 150))
         pic_array = image.img_to_array(pic)
         pic_array = pic_array / 255
@@ -105,8 +113,11 @@ class main:
         print('Getting pictures')
         self.current_pic = self.picture_list[self.picture_index]
         picture_label = self.picture_dic[self.current_pic]
-        picture_path = os.path.join(pic_dir, picture_label)
-        picture_path = os.path.join(picture_path, self.current_pic)
+        if self.mode == 'labeled_images':
+            picture_path = os.path.join(pic_dir, picture_label)
+            picture_path = os.path.join(picture_path, self.current_pic)
+        else:
+            picture_path = os.path.join(pic_dir, self.current_pic)
         img = ImageTk.PhotoImage(file=picture_path)
         return img
 
@@ -126,9 +137,30 @@ class main:
             if count != 100:
                 pics[pic_name] = label
 
+    def get_non_labeled_pics(self):
+            pics = {}
+            self.get_pictures_from_dir(pic_dir, pics, 'none')
+            self.picture_dic = pics
+            self.picture_list = sample(pics.keys(), len(pics.keys()))
+            self.picture_index = -1
+
+if len(sys.argv) == 1:
+    print('Enter mode: labeled_images or non_labeled_images')
+    print("For labeled_images mode, use argument labeled_images, Demo will use processed images")
+    print('For non_labeled images, use argument non_labeled_images followed by directory relative to previous directory')
+    sys.exit()
+mode = sys.argv[1]
+
+if mode == 'labeled_images':
+    pic_dir = os.path.join(current_dir, 'gui')
+elif mode == 'non_labeled_images':
+    pic_dir = os.path.join(current_dir, sys.argv[2])
+    print(pic_dir)
+else:
+    print('Enter a valid mode')
 
 root = Tk()
-main(root)
+main(root, mode)
 root.title('Traffic detector')
 root.resizable(0, 0)
 root.mainloop()
