@@ -38,9 +38,9 @@ val_dir_size = 4500
 test_dir_size = 4500
 gui_dir_size = 1000
 train_size = 5000
-val_size = 1500
-test_size = 1500
-gui_size = 500
+val_size = 400
+test_size = 400
+gui_size = 100
 
 
 def preprocess():
@@ -158,7 +158,7 @@ def inDrivableArea(drivable_areas, box2d):
 	return in_left_bounds and in_right_bounds			
 
 def isClose(box2d):
-	y_thresh = 40
+	y_thresh = 60
 	y1 = box2d['y1']
 	y2 = box2d['y2']
 	#print("y1 is {}", y1)
