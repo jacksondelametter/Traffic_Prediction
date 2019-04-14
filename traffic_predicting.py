@@ -33,6 +33,8 @@ test_dir = os.path.join(current_dir, 'test')
 val_dir = os.path.join(current_dir, 'val')
 gui_dir = os.path.join(current_dir, 'gui')
 
+src_path = os.path.join(current_dir, 'Traffic_Prediction')
+
 train_dir_size = 50000
 val_dir_size = 4500
 test_dir_size = 4500
@@ -41,6 +43,8 @@ train_size = 5000
 val_size = 400
 test_size = 400
 gui_size = 100
+
+batch_no = 20;
 
 
 def preprocess():
@@ -161,8 +165,6 @@ def isClose(box2d):
 	y_thresh = 60
 	y1 = box2d['y1']
 	y2 = box2d['y2']
-	#print("y1 is {}", y1)
-	#print("y2 is {}", y2)
 	y_size = y2 - y1
 	if(y_size <= y_thresh):
 		return False
@@ -190,7 +192,6 @@ def copy_images(save_dir, images_dir):
         shutil.copy(src, save_dir)
 
 def train_network():
-	batch_no = 20;
 	train_datagen = ImageDataGenerator(rescale=1./255)
 	test_datagen = ImageDataGenerator(rescale=1./255)
 	val_datagen = ImageDataGenerator(rescale=1./255)
@@ -199,30 +200,9 @@ def train_network():
 	train_generator = train_datagen.flow_from_directory(train_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
 	val_generator = val_datagen.flow_from_directory(val_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
 	test_generator = test_datagen.flow_from_directory(test_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
-	#train_generator = train_datagen.flow_from_directory(train_dir, target_size=(150, 150), batch_size=batch_no, class_mode='categorical', shuffle=True)
-	#val_generator = val_datagen.flow_from_directory(val_dir, target_size=(150, 150), batch_size=batch_no, class_mode='categorical', shuffle=True)
 	test_generator = test_datagen.flow_from_directory(test_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
-	#for image_batch, label_batch in train_generator:
-	 #   print('data batch shape:', image_batch.shape)
-	  #  print('labels batch shape:', label_batch.shape)
-	  #  break;
 
 	print('Creating network model')
-
-	'''
-	model = models.Sequential()
-	model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)))
-	model.add(layers.MaxPooling2D((2, 2)))
-	model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-	model.add(layers.MaxPooling2D((2, 2)))
-	model.add(layers.Conv2D(128, (3, 3), activation='relu'))
-	model.add(layers.MaxPooling2D((2, 2)))
-	model.add(layers.Flatten())
-	model.add(layers.Dropout(0.5))
-	model.add(layers.Dense(256, activation='relu'))
-	model.add(layers.Dense(1, activation='sigmoid'))
-	model.summary()
-	'''
 	model = models.Sequential()
 	model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)))
 	model.add(layers.MaxPooling2D((2, 2)))
@@ -239,24 +219,6 @@ def train_network():
 	model.add(layers.Dense(512, activation='relu'))
 	model.add(layers.Dense(1, activation='sigmoid'))
 	model.summary()
-	
-
-	'''
-	model = models.Sequential()
-	model.add(layers.Conv2D(16, (3, 3), activation='relu', input_shape=(150, 150, 3)))
-	model.add(layers.MaxPooling2D((2, 2)))
-	model.add(layers.Conv2D(32, (3, 3), activation='relu'))
-	model.add(layers.MaxPooling2D((2, 2)))
-	model.add(layers.Conv2D(128, (3, 3), activation='relu'))
-	model.add(layers.MaxPooling2D((2, 2)))
-	model.add(layers.Conv2D(128, (3, 3), activation='relu'))
-	model.add(layers.MaxPooling2D((2, 2)))
-	model.add(layers.Flatten())
-	model.add(layers.Dropout(0.5))
-	model.add(layers.Dense(512, activation='relu'))
-	model.add(layers.Dense(3, activation='sigmoid'))
-	model.summary()
-	'''
 
 	model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['acc'])
 
@@ -265,15 +227,13 @@ def train_network():
 	print("Training network")
 	history = model.fit_generator(train_generator, steps_per_epoch=train_epoch_steps, epochs=16, validation_data=val_generator, validation_steps=val_epoch_steps)
 
-	test_epoch_steps = test_size / batch_no
-	results = model.evaluate_generator(generator=test_generator, steps=test_epoch_steps)
-
-	print('Results\n loss: {}\n acc: {}', results[0], results[1])
-
+	os.chdir(src_path)
 	model_json = model.to_json()
 	with open("model.json", "w") as json_file:
 		json_file.write(model_json)
 	model.save_weights("model.h5")
+
+	test_model()
 
 	acc = history.history['acc']
 	val_acc = history.history['val_acc']
@@ -292,6 +252,21 @@ def train_network():
 
 	plt.show()
 
+def test_model():
+	os.chdir(src_path)
+	json_file = open('model.json')
+	loaded_model_json = json_file.read()
+	json_file.close()
+	model = model_from_json(loaded_model_json)
+	model.load_weights('model.h5')
+	test_datagen = ImageDataGenerator(rescale=1./255)
+	test_generator = test_datagen.flow_from_directory(test_dir, target_size=(150, 150), batch_size=batch_no, class_mode='binary', shuffle=True)
+	test_epoch_steps = test_size / batch_no
+	model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['acc'])
+	results = model.evaluate_generator(generator=test_generator, steps=test_epoch_steps)
+	print('Results\n loss: ', results[0], '\n', 'acc: ', results[1], '\n')
+	return results
+
 # Program starts here
 if len(sys.argv) == 0:
 	print('Must have mode argument: preprocess or train')
@@ -300,6 +275,8 @@ if command == 'process':
 	preprocess()
 elif command == 'train':
 	train_network()
+elif command == 'test':
+	test_model()
 else:
 	print('Invalid argument')
 
