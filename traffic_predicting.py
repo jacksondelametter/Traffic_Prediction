@@ -12,6 +12,7 @@ from keras import regularizers
 from keras.models import model_from_json
 import sys
 
+# Sets up all the directory paths that will be created in procesing
 os.chdir('..')
 current_dir = os.getcwd()
 images_path = os.path.join(current_dir, 'bdd100k_images')
@@ -35,6 +36,7 @@ gui_dir = os.path.join(current_dir, 'gui')
 
 src_path = os.path.join(current_dir, 'Traffic_Prediction')
 
+# Variables used to give the number of images the train, test, val and gui directories
 train_dir_size = 50000
 val_dir_size = 4500
 test_dir_size = 4500
@@ -44,19 +46,24 @@ val_size = 400
 test_size = 400
 gui_size = 100
 
+# Used to indicate the batch number for taining and testing
 batch_no = 20;
 
 
 def preprocess():
-	K.tensorflow_backend._get_available_gpus()
-	#print(device_lib.list_local_devices())
-
+	'''
+		preprocesses images into low and medium categories in directories train, test, val, and gui
+	'''
+	
+	# Removes and creates these directories
 	print("Making train, test, and val directories")
 	make_category_dirs(train_dir)
 	make_category_dirs(test_dir)
 	make_category_dirs(val_dir)
 	make_category_dirs(gui_dir)
 
+	# Gets the images names in the labels files for adding them into the directories stated above
+	# Note the variables at the top of the file determine the sizes for each directory
 	train_labels = get_labels_file(train_labels_path)
 	temp_val_labels = get_labels_file(val_labels_path)
 	val_labels = temp_val_labels[0:val_dir_size]
@@ -65,12 +72,14 @@ def preprocess():
 	gui_labels_limit = test_labels_limit + gui_dir_size
 	gui_labels = temp_val_labels[test_labels_limit:gui_labels_limit]
 
+	# Categorizes pictures and adds then into the specified directory
 	print("Categorizing train, test, val, and gui directories");
 	categorize_images(train_labels, train_dir, train_size, train_images_path, train_dir_size)
 	categorize_images(test_labels, test_dir, test_size, val_images_path, test_dir_size)
 	categorize_images(val_labels, val_dir, val_size, val_images_path, val_dir_size)
 	categorize_images(gui_labels, gui_dir, gui_size, val_images_path, gui_dir_size)
 
+# Used to get a label file from the specified directory
 def get_labels_file(labels_path):
 	file_object = open(labels_path)
 	if(file_object == None):
@@ -81,12 +90,14 @@ def get_labels_file(labels_path):
 	print('Loading json files')
 	return json.load(file_object)
 
+# Creates the given directory
 def make_dir(dir):
     if(os.path.exists(dir)):
         shutil.rmtree(dir)
     os.mkdir(dir)
     print('Created director ', dir)
 
+# Creates the given directory with the two categories in it
 def make_category_dirs(dir):
     make_dir(dir)
     low_traffic_dir = os.path.join(dir, 'low')
@@ -94,6 +105,7 @@ def make_category_dirs(dir):
     medium_traffic_dir = os.path.join(dir, 'medium')
     make_dir(medium_traffic_dir)
 
+# Categorizes the given images from the labels and adds them into the given directory
 def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_size):
     low_dir = os.path.join(save_dir, 'low')
     medium_dir = os.path.join(save_dir, 'medium')
@@ -121,12 +133,11 @@ def categorize_images(labels, save_dir, save_dir_size, images_dir, image_dir_siz
         elif car_count > low_traffic_max_thresh and medium_traffic_num < save_dir_size:
         	shutil.copy(src, medium_dir)
         	medium_traffic_num = medium_traffic_num + 1
-        #print("image: ", image_name, ' has car count ', car_count)
-        #sys.exit()
     print('Categorized ', save_dir)
     print('low traffic no: ', low_traffic_num)
     print('medium traffic no: ', medium_traffic_num)
 
+# Gets the driveable areas for an image
 def getDrivableArea(image_labels):
 	drivable_areas = []
 	for label in image_labels:
@@ -141,6 +152,7 @@ def getDrivableArea(image_labels):
 
 	return drivable_areas
 
+# Determines if the given vehicle is in a drivable area
 def inDrivableArea(drivable_areas, box2d):
 	x1_car = box2d['x1']
 	x2_car = box2d['x2']
@@ -161,6 +173,7 @@ def inDrivableArea(drivable_areas, box2d):
 				break
 	return in_left_bounds and in_right_bounds			
 
+# Determines if the given vehicle is close or not
 def isClose(box2d):
 	y_thresh = 60
 	y1 = box2d['y1']
@@ -170,6 +183,7 @@ def isClose(box2d):
 		return False
 	return True
 
+# Determines if the given label is a vehicle or not
 def isVehicle(label, drivable_areas):
 	category = label['category']
 	close = False
@@ -178,19 +192,10 @@ def isVehicle(label, drivable_areas):
 		box = label['box2d']
 		close = isClose(box)
 		drivable = inDrivableArea(drivable_areas, box)
-		#if close == False:
-		#	print(category, ' is to far away')
-		#if drivable == False:
-		#	print(category, ' is not in a drivable area')
 		return close and drivable
 	return False
 
-def copy_images(save_dir, images_dir):
-    filenames = os.listdir(images_dir)[0:500]
-    for filename in filenames:
-        src = os.path.join(images_dir, filename)
-        shutil.copy(src, save_dir)
-
+# Trains the network
 def train_network():
 	train_datagen = ImageDataGenerator(rescale=1./255)
 	test_datagen = ImageDataGenerator(rescale=1./255)
@@ -227,6 +232,7 @@ def train_network():
 	print("Training network")
 	history = model.fit_generator(train_generator, steps_per_epoch=train_epoch_steps, epochs=16, validation_data=val_generator, validation_steps=val_epoch_steps)
 
+	# Saves the model and its trained weight
 	os.chdir(src_path)
 	model_json = model.to_json()
 	with open("model.json", "w") as json_file:
@@ -235,6 +241,7 @@ def train_network():
 
 	test_model()
 
+	# Displays the training results
 	acc = history.history['acc']
 	val_acc = history.history['val_acc']
 	loss = history.history['loss']
@@ -252,6 +259,7 @@ def train_network():
 
 	plt.show()
 
+# Tests the model with the test data
 def test_model():
 	os.chdir(src_path)
 	json_file = open('model.json')
